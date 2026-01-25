@@ -3,7 +3,6 @@
 # 🎬 Always Video Mode
 **Force "Switch to Video" instantly on Spotify**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)](https://github.com/uWaazy/spicetify-always-video/releases)
 [![Spicetify](https://img.shields.io/badge/Spicetify-Extension-1DB954?style=for-the-badge&logo=spotify&logoColor=white)](https://spicetify.app/)
 
 <br />
