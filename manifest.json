@@ -1,11 +1,11 @@
 {
   "name": "Always Video Mode",
   "description": "Automatically switches to video mode instantly when a music video is available.",
-  "main": "main.js",
+  "main": "AlwaysVideo.js",
   "authors": [
     {
       "name": "uWaazy",
-      "url": "https://github.com/uWaazy"
+      "url": "https://github.com/uWaazy/AlwaysVideo"
     }
   ],
   "version": "1.0.0",
