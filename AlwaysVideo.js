@@ -4,14 +4,13 @@
         return;
     }
 
-    // State & Configuration
+    // --- CONFIGURATION ---
     let isVideoModeEnabled = localStorage.getItem("AlwaysVideo_Enabled") === "true";
     
-    // Supported labels (English & Portuguese compatibility)
     const VIDEO_BTN_LABELS = ["switch to video", "video", "mudar para vídeo", "vídeo"];
     const AUDIO_BTN_LABELS = ["switch to audio", "audio", "mudar para áudio", "áudio"];
 
-    // CSS Injection
+    // --- CSS STYLES ---
     const style = document.createElement('style');
     style.innerHTML = `
         .always-video-indicator {
@@ -39,7 +38,21 @@
     `;
     document.head.appendChild(style);
 
-    // Helpers
+    // --- CROSSFADE MANAGER ---
+    // Video mode requires a clean cut (0s crossfade) to prevent cutting off the previous track early.
+    function manageCrossfade(shouldDisable) {
+        try {
+            if (shouldDisable) {
+                if (Spicetify.Platform?.PlayerAPI?.setCrossfadeDuration) {
+                    Spicetify.Platform.PlayerAPI.setCrossfadeDuration(0);
+                }
+            } 
+        } catch (e) {
+            console.error("[AlwaysVideo] Could not adjust crossfade.", e);
+        }
+    }
+
+    // --- HELPERS ---
     function isButton(element, labels) {
         if (!element) return false;
         const text = (element.ariaLabel || element.title || element.innerText || "").toLowerCase();
@@ -63,7 +76,7 @@
         }
     }
 
-    // Main Loop (High frequency scanner)
+    // --- MAIN LOOP (High Frequency Scanner) ---
     setInterval(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
         const switchBtn = buttons.find(b => 
@@ -79,7 +92,7 @@
         }
     }, 50);
 
-    // Click Handler (Toggle Logic)
+    // --- INTERACTION HANDLER ---
     document.addEventListener("click", (e) => {
         const target = e.target.closest("button");
         if (!target) return;
@@ -89,16 +102,25 @@
 
         if (isVideoBtn || isAudioBtn) {
             if (isVideoBtn && !isVideoModeEnabled) {
+                // ENABLE MODE
                 isVideoModeEnabled = true;
                 localStorage.setItem("AlwaysVideo_Enabled", "true");
+                manageCrossfade(true); // Force 0s crossfade
                 updateIndicator(target);
+                Spicetify.showNotification("Always Video: Active (Crossfade disabled)", false);
             }
             else if (isAudioBtn && isVideoModeEnabled) {
+                // DISABLE MODE
                 isVideoModeEnabled = false;
                 localStorage.setItem("AlwaysVideo_Enabled", "false");
                 updateIndicator(target);
             }
         }
     }, true);
+
+    // Initial check
+    if (isVideoModeEnabled) {
+        setTimeout(() => manageCrossfade(true), 2000);
+    }
 
 })();
