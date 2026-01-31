@@ -1,21 +1,25 @@
 (async function AlwaysVideoSequences() {
-    // Wait for Spicetify to load
     if (!Spicetify.Player) {
         setTimeout(AlwaysVideoSequences, 1000);
         return;
     }
 
     // --- CONFIGURATION ---
-    // Updated key to match new plugin name
     let isVideoModeEnabled = localStorage.getItem("AlwaysVideoSequences_Enabled") === "true";
     let lastSongURI = "";
     let hasSwitchedForCurrentSong = false;
     
-    // Button labels compatibility (English & Portuguese)
-    const VIDEO_BTN_LABELS = ["switch to video", "video", "mudar para vídeo", "vídeo"];
-    const AUDIO_BTN_LABELS = ["switch to audio", "audio", "mudar para áudio", "áudio"];
+    // --- MULTI-LANGUAGE DICTIONARY ---
+    // Video is usually similar across languages, but Audio needs specific checks to avoid "Radio" bugs.
+    const VIDEO_KEYWORDS = ["video", "vídeo", "vidéo"]; 
+    
+    // Specific phrases for "Audio" to be safe (EN, PT, ES, FR, DE, IT, PL)
+    const AUDIO_PHRASES = [
+        "switch to audio", "mudar para áudio", "cambiar a audio", "passer en audio", // EN, PT, ES, FR
+        "zu audio wechseln", "passa all'audio", "przełącz na dźwięk" // DE, IT, PL
+    ];
 
-    // --- CSS STYLES (Indicator & Tooltip) ---
+    // --- CSS ---
     const style = document.createElement('style');
     style.innerHTML = `
         .avs-indicator {
@@ -29,22 +33,18 @@
             position: relative;
             cursor: help;
         }
-        
-        /* State Colors */
         .avs-indicator.active {
-            background-color: #1db954; /* Spotify Green */
+            background-color: #1db954;
             box-shadow: 0 0 8px #1db954;
             opacity: 1;
             transform: scale(1);
         }
         .avs-indicator.inactive {
-            background-color: #b3b3b3; /* Grey */
+            background-color: #b3b3b3;
             box-shadow: none;
             opacity: 0.5;
             transform: scale(0.8);
         }
-
-        /* Tooltip Logic (Hover) */
         .avs-indicator:hover::after {
             content: attr(data-tooltip);
             position: absolute;
@@ -63,43 +63,60 @@
             opacity: 0;
             animation: fadeIn 0.2s forwards;
         }
-
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
+        @keyframes fadeIn { to { opacity: 1; } }
     `;
     document.head.appendChild(style);
 
-    // --- CROSSFADE MANAGER ---
+    // --- HELPERS ---
     function manageCrossfade(shouldDisable) {
         try {
-            // Force 0s crossfade to prevent audio cuts during video switch
             if (shouldDisable && Spicetify.Platform?.PlayerAPI?.setCrossfadeDuration) {
                 Spicetify.Platform.PlayerAPI.setCrossfadeDuration(0);
             }
-        } catch (e) {
-            // Silently fail if API changes
-        }
+        } catch (e) {}
     }
 
-    // --- DOM HELPERS ---
-    function isButton(element, labels) {
+    function isTargetButton(element, type) {
         if (!element) return false;
+        
+        // Get all possible text sources
         const text = (element.ariaLabel || element.title || element.innerText || "").toLowerCase();
-        return labels.some(label => text.includes(label));
+        
+        // Safety: Ignore buttons with very long text (usually "Go to Song Radio" descriptions)
+        if (text.length > 50) return false;
+
+        if (type === 'video') {
+            // For Video, we look for the keyword "video" (covers 90% of languages)
+            // AND ensure it doesn't say "copy video link" or similar context menu items
+            return VIDEO_KEYWORDS.some(key => text.includes(key)) && !text.includes("link") && !text.includes("url");
+        } 
+        
+        if (type === 'audio') {
+            // For Audio, we use strict phrases to avoid the "Radio" bug
+            return AUDIO_PHRASES.some(phrase => text.includes(phrase));
+        }
+        
+        return false;
+    }
+
+    function cleanupGhostIndicators(currentButton) {
+        const allIndicators = document.querySelectorAll('.avs-indicator');
+        allIndicators.forEach(dot => {
+            if (dot.parentElement !== currentButton) {
+                dot.remove();
+            }
+        });
     }
 
     function updateIndicator(button) {
+        cleanupGhostIndicators(button);
         let dot = button.querySelector('.avs-indicator');
-        
-        // Create dot if it doesn't exist
         if (!dot) {
             dot = document.createElement('span');
             dot.className = 'avs-indicator';
             button.appendChild(dot);
         }
 
-        // Update visual state and tooltip text
         if (isVideoModeEnabled) {
             dot.classList.remove('inactive');
             dot.classList.add('active');
@@ -111,58 +128,57 @@
         }
     }
 
-    // --- MAIN LOOP (Smart Session Scanner) ---
+    // --- MAIN LOOP ---
     setInterval(() => {
         // 1. Detect Song Change
         const currentURI = Spicetify.Player.data?.item?.uri;
         if (currentURI !== lastSongURI) {
             lastSongURI = currentURI;
-            hasSwitchedForCurrentSong = false; // Reset switch flag for new track
+            hasSwitchedForCurrentSong = false;
         }
 
         // 2. Find Switch Button
         const buttons = Array.from(document.querySelectorAll('button'));
         const switchBtn = buttons.find(b => 
-            isButton(b, VIDEO_BTN_LABELS) || isButton(b, AUDIO_BTN_LABELS)
+            isTargetButton(b, 'video') || isTargetButton(b, 'audio')
         );
 
+        // 3. Update UI
         if (switchBtn) {
             updateIndicator(switchBtn);
 
-            // 3. Auto-Switch Logic (Only once per track to avoid sidebar loops)
+            // 4. Auto-Switch Logic
             if (isVideoModeEnabled && 
-                isButton(switchBtn, VIDEO_BTN_LABELS) && 
+                isTargetButton(switchBtn, 'video') && 
                 !hasSwitchedForCurrentSong) {
                 
                 switchBtn.click();
                 hasSwitchedForCurrentSong = true;
-                console.log("[AlwaysVideoSequences] Switched to video sequence.");
             }
+        } else {
+            cleanupGhostIndicators(null);
         }
     }, 50);
 
-    // --- USER INTERACTION HANDLER ---
+    // --- INTERACTION HANDLER ---
     document.addEventListener("click", (e) => {
         const target = e.target.closest("button");
         if (!target) return;
 
-        const isVideoBtn = isButton(target, VIDEO_BTN_LABELS);
-        const isAudioBtn = isButton(target, AUDIO_BTN_LABELS);
+        const isVideoBtn = isTargetButton(target, 'video');
+        const isAudioBtn = isTargetButton(target, 'audio');
 
         if (isVideoBtn || isAudioBtn) {
             if (isVideoBtn) {
-                // User manually clicked Video -> Enable Mode
                 if (!isVideoModeEnabled) {
                     isVideoModeEnabled = true;
                     localStorage.setItem("AlwaysVideoSequences_Enabled", "true");
                     manageCrossfade(true);
                 }
-                // Mark as handled to prevent double-click loop
                 hasSwitchedForCurrentSong = true; 
                 updateIndicator(target);
             }
             else if (isAudioBtn) {
-                // User manually clicked Audio -> Disable Mode
                 if (isVideoModeEnabled) {
                     isVideoModeEnabled = false;
                     localStorage.setItem("AlwaysVideoSequences_Enabled", "false");
@@ -172,7 +188,6 @@
         }
     }, true);
 
-    // Initial State Enforcement
     if (isVideoModeEnabled) {
         setTimeout(() => manageCrossfade(true), 2000);
     }
