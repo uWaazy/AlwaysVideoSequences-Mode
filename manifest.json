@@ -1,7 +1,7 @@
 {
-  "name": "Always Video Mode",
+  "name": "Always Video Sequences",
   "description": "Automatically switches to video mode instantly when a music video is available.",
-  "main": "AlwaysVideo.js",
+  "main": "AlwaysVideoSequences.js",
   "authors": [
     {
       "name": "uWaazy",
@@ -9,6 +9,6 @@
     }
   ],
   "preview": "preview.png",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "readme": "README.md"
 }

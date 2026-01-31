@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎬 Always Video Mode
+# 🎬 Sequences Always Vide Mode
 **Force "Switch to Video" instantly on Spotify**
 
 [![Spicetify](https://img.shields.io/badge/Spicetify-Extension-1DB954?style=for-the-badge&logo=spotify&logoColor=white)](https://spicetify.app/)
@@ -28,11 +28,11 @@
 ## 📦 Installation
 
 ### Option 1: Marketplace (Recommended)
-Simply search for **"Always Video Mode"** in the Spicetify Marketplace and click install.
+Simply search for **"Always Video Sequences Mode"** in the Spicetify Marketplace and click install.
 
 ### Option 2: Manual Installation
 
-1. Download the `AlwaysVideo.js` file.
+1. Download the `AlwaysVideoSequences.js` file.
 2. Place the file in your Spicetify Extensions folder:
 
 | Platform | Path |
@@ -43,7 +43,7 @@ Simply search for **"Always Video Mode"** in the Spicetify Marketplace and click
 3. Open your terminal/PowerShell and run:
 
 ```bash
-spicetify config extensions AlwaysVideo.js
+spicetify config extensions AlwaysVideoSequences.js
 spicetify apply
 ```
 
@@ -51,7 +51,7 @@ spicetify apply
 If you want to remove the extension, simply run:
 
 ```bash
-spicetify config extensions AlwaysVideo.js-
+spicetify config extensions AlwaysVideoSequences.js-
 spicetify apply
 ```
 
