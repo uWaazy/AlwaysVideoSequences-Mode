@@ -4,22 +4,21 @@
         return;
     }
 
-    // --- CONFIGURATION ---
     let isVideoModeEnabled = localStorage.getItem("AlwaysVideoSequences_Enabled") === "true";
     let lastSongURI = "";
     let hasSwitchedForCurrentSong = false;
-    
-    // --- MULTI-LANGUAGE DICTIONARY ---
-    // Video is usually similar across languages, but Audio needs specific checks to avoid "Radio" bugs.
-    const VIDEO_KEYWORDS = ["video", "vídeo", "vidéo"]; 
-    
-    // Specific phrases for "Audio" to be safe (EN, PT, ES, FR, DE, IT, PL)
+    let isWarmingUp = true;
+
+    setTimeout(() => {
+        isWarmingUp = false;
+    }, 2500);
+
+    const VIDEO_KEYWORDS = ["video", "vídeo", "vidéo"];
     const AUDIO_PHRASES = [
-        "switch to audio", "mudar para áudio", "cambiar a audio", "passer en audio", // EN, PT, ES, FR
-        "zu audio wechseln", "passa all'audio", "przełącz na dźwięk" // DE, IT, PL
+        "switch to audio", "mudar para áudio", "cambiar a audio", "passer en audio",
+        "zu audio wechseln", "passa all'audio", "przełącz na dźwięk"
     ];
 
-    // --- CSS ---
     const style = document.createElement('style');
     style.innerHTML = `
         .avs-indicator {
@@ -67,7 +66,6 @@
     `;
     document.head.appendChild(style);
 
-    // --- HELPERS ---
     function manageCrossfade(shouldDisable) {
         try {
             if (shouldDisable && Spicetify.Platform?.PlayerAPI?.setCrossfadeDuration) {
@@ -78,24 +76,19 @@
 
     function isTargetButton(element, type) {
         if (!element) return false;
-        
-        // Get all possible text sources
+
         const text = (element.ariaLabel || element.title || element.innerText || "").toLowerCase();
-        
-        // Safety: Ignore buttons with very long text (usually "Go to Song Radio" descriptions)
+
         if (text.length > 50) return false;
 
         if (type === 'video') {
-            // For Video, we look for the keyword "video" (covers 90% of languages)
-            // AND ensure it doesn't say "copy video link" or similar context menu items
             return VIDEO_KEYWORDS.some(key => text.includes(key)) && !text.includes("link") && !text.includes("url");
-        } 
-        
+        }
+
         if (type === 'audio') {
-            // For Audio, we use strict phrases to avoid the "Radio" bug
             return AUDIO_PHRASES.some(phrase => text.includes(phrase));
         }
-        
+
         return false;
     }
 
@@ -128,26 +121,25 @@
         }
     }
 
-    // --- MAIN LOOP ---
     setInterval(() => {
-        // 1. Detect Song Change
+        if (isWarmingUp) return;
+
         const currentURI = Spicetify.Player.data?.item?.uri;
+        if (!currentURI) return;
+
         if (currentURI !== lastSongURI) {
             lastSongURI = currentURI;
             hasSwitchedForCurrentSong = false;
         }
 
-        // 2. Find Switch Button
         const buttons = Array.from(document.querySelectorAll('button'));
         const switchBtn = buttons.find(b => 
             isTargetButton(b, 'video') || isTargetButton(b, 'audio')
         );
 
-        // 3. Update UI
         if (switchBtn) {
             updateIndicator(switchBtn);
 
-            // 4. Auto-Switch Logic
             if (isVideoModeEnabled && 
                 isTargetButton(switchBtn, 'video') && 
                 !hasSwitchedForCurrentSong) {
@@ -160,7 +152,6 @@
         }
     }, 50);
 
-    // --- INTERACTION HANDLER ---
     document.addEventListener("click", (e) => {
         const target = e.target.closest("button");
         if (!target) return;
@@ -169,13 +160,15 @@
         const isAudioBtn = isTargetButton(target, 'audio');
 
         if (isVideoBtn || isAudioBtn) {
+            isWarmingUp = false;
+
             if (isVideoBtn) {
                 if (!isVideoModeEnabled) {
                     isVideoModeEnabled = true;
                     localStorage.setItem("AlwaysVideoSequences_Enabled", "true");
                     manageCrossfade(true);
                 }
-                hasSwitchedForCurrentSong = true; 
+                hasSwitchedForCurrentSong = true;
                 updateIndicator(target);
             }
             else if (isAudioBtn) {
