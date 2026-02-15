@@ -129,7 +129,11 @@
 
         if (currentURI !== lastSongURI) {
             lastSongURI = currentURI;
-            hasSwitchedForCurrentSong = false;
+            hasSwitchedForCurrentSong = true; 
+            
+            setTimeout(() => {
+                hasSwitchedForCurrentSong = false;
+            }, 1000);
         }
 
         const buttons = Array.from(document.querySelectorAll('button'));
